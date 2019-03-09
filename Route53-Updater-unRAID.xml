@@ -31,53 +31,22 @@
   <Network Default="bridge">bridge</Network>
 
 
-  <Config
-    Name="DNS Name"
-    Type="Variable"
-    Target="DNS_NAME"
-    Default="your.domain.com"
-    Description="Both <record>, and *.<record> will have their A records updated."
-    Required="true">your.domain.com</Config>
+  <Config Type="Variable" Name="DNS Name" Target="DNS_NAME" Default="your.domain.com" Required="true"
+    Description="Both <record>, and *.<record> will have their A records updated.">your.domain.com</Config>
 
-  <Config
-    Name="Hosted Zone ID"
-    Type="Variable"
-    Default="hosted-zone-id"
-    Target="R53_HOSTED_ZONE_ID"
-    Description="Route53's Hosted Zone ID to match the domain you're updating.  Will look something like 'A01BCD2EF3GHIJ'"
-    Required="true">hosted-zone-id</Config>
+  <Config Type="Variable" Name="Hosted Zone ID" Target="R53_HOSTED_ZONE_ID" Default="hosted-zone-id" Required="true"
+    Description="Route53's Hosted Zone ID to match the domain you're updating.  Will look something like 'A01BCD2EF3GHIJ'">hosted-zone-id</Config>
 
-  <Config
-    Name="AWS Access Key ID"
-    Type="Variable"
-    Default="key-id"
-    Target="AWS_ACCESS_KEY_ID"
-    Description="AWS IAM user's access key ID.  Ideally a user which only has permission to do the desired Route53 update."
-    Required="true">key-id</Config>
+  <Config Type="Variable" Name="AWS Access Key ID" Target="AWS_ACCESS_KEY_ID" Default="key-id" Required="true"
+    Description="AWS IAM user's access key ID.  Ideally a user which only has permission to do the desired Route53 update.">key-id</Config>
 
-  <Config
-    Name="AWS Secret Access Key"
-    Type="Variable"
-    Default="secret"
-    Target="AWS_SECRET_ACCESS_KEY"
-    Description="AWS IAM user's secret access key.  Ideally a user which only has permission to do the desired Route53 update."
-    Required="true"
-    Mask="true">secret</Config>
+  <Config Type="Variable" Name="AWS Secret Access Key" Target="AWS_SECRET_ACCESS_KEY" Default="secret" Required="true"
+    Description="AWS IAM user's secret access key.  Ideally a user which only has permission to do the desired Route53 update.">secret</Config>
 
-  <Config
-    Name="AWS Secret Access Key"
-    Type="Variable"
-    Default="us-east-1"
-    Target="AWS_DEFAULT_REGION"
-    Description="The client run by this container will connect to this region."
-    Required="true"
-    Mask="true">us-east-1</Config>
+  <Config Type="Variable" Name="AWS Secret Access Key" Target="AWS_DEFAULT_REGION" Default="us-east-1" Mask="true" Required="true"
+    Description="The client run by this container will connect to this region.">us-east-1</Config>
 
-  <Config
-    Name="TTL Seconds"
-    Type="String"
-    Default="300"
-    Description="DNS entries' Time To Live, in seconds."
-    Required="false">300</Config>
+  <Config Type="String" Name="TTL Seconds" Target="TTL_SECONDS" Default="300" Required="false"
+    Description="DNS entries' Time To Live, in seconds.">300</Config>
 </Container>
 
