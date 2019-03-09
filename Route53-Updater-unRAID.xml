@@ -1,23 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Container version="2">
-    <!-- unRaid Docker template -->
-    <Name>Route53-Updater</Name>
-    <Overview>
-        Keep a Route53 A record and wilcard A record up to date for finding your home (or wherever) network.  Similar to using DuckDNS, but instead it's your own Amazon Web Services (AWS) Route53 records.
-    </Overview>
-    <Category>Network:DNS</Category>
     <Date>2019-03-09</Date>
     <Beta>False</Beta>
-
-    <GitHub>https://github.com/Akaito/route53-updater-docker</GitHub>
+    <Category>Network:DNS</Category>
+    <Name>Route53-Updater</Name>
+    <Changes>
+[font size=3]2019.03.09[/font]
+- Initial version.
+    </Changes>
+    <Overview>
+        Keep a Route53 A record updated with your public IP.
+    </Overview>
+    <Description>
+        Keep a Route53 A record and wilcard A record up to date for finding your home (or wherever) network.  Similar to using DuckDNS, but instead it's your own Amazon Web Services (AWS) Route53 records.
+    </Description>
     <Registry>https://registry.hub.docker.com/u/codesaru/route53-updater/</Registry>
-    <Repository>codesaru/route53-updater:latest</Repository>
-
+    <GitHub>https://github.com/Akaito/route53-updater-docker</GitHub>
+    <Repository>codesaru/route53-updater</Repository>
+    <BindTime>true</BindTime>
     <Privileged>false</Privileged>
-    <Network Default="bridge">bridge</Network>
+    <Environment/>
     <Networking>
         <Mode>bridge</Mode>
     </Networking>
+
+    <Network Default="bridge">bridge</Network>
 
 
     <Config
@@ -26,25 +33,21 @@
         Target="DNS_NAME"
         Default="your.domain.com"
         Description="Both <record>, and *.<record> will have their A records updated."
-        Required="true">
-        your.domain.com
-    </Config>
+        Required="true">your.domain.com</Config>
 
     <Config
         Name="Hosted Zone ID"
         Type="Variable"
         Target="R53_HOSTED_ZONE_ID"
         Description="Route53's Hosted Zone ID to match the domain you're updating.  Will look something like 'A01BCD2EF3GHIJ'"
-        Required="true">
-    </Config>
+        Required="true"></Config>
 
     <Config
         Name="AWS Access Key ID"
         Type="Variable"
         Target="AWS_ACCESS_KEY_ID"
         Description="AWS IAM user's access key ID.  Ideally a user which only has permission to do the desired Route53 update."
-        Required="true">
-    </Config>
+        Required="true"></Config>
 
     <Config
         Name="AWS Secret Access Key"
@@ -52,8 +55,7 @@
         Target="AWS_SECRET_ACCESS_KEY"
         Description="AWS IAM user's secret access key.  Ideally a user which only has permission to do the desired Route53 update."
         Required="true"
-        Mask="true">
-    </Config>
+        Mask="true"></Config>
 
     <Config
         Name="AWS Secret Access Key"
@@ -62,22 +64,13 @@
         Target="AWS_DEFAULT_REGION"
         Description="The client run by this container will connect to this region."
         Required="true"
-        Mask="true">
-        us-east-1
-    </Config>
+        Mask="true">us-east-1</Config>
 
     <Config
         Name="TTL Seconds"
         Type="String"
         Default="300"
         Description="DNS entries' Time To Live, in seconds."
-        Required="false">
-        300
-    </Config>
-
-    <Changes>
-[font size=3]2019.03.09[/font]
-- Initial version.
-    </Changes>
+        Required="false">300</Config>
 </Container>
 
