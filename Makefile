@@ -12,14 +12,12 @@ create:
 run:
 	@# -p format: host:container
 	sudo docker run -d \
-		--net=home-servers \
 		--name route53-updater \
 		codesaru/route53-updater
 
 run-interactive:
 	@# -p format: host:container
 	sudo docker run -ti \
-		--net=home-servers \
 		--name route53-updater \
 		codesaru/route53-updater
 
