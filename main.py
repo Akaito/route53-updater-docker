@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os
+import time
 import urllib
 
 import botocore
@@ -67,4 +68,8 @@ def update_ip():
 
 if __name__ == '__main__':
     update_ip()
+
+    while os.getenv('KEEP_CONTAINER_ALIVE', 'False').lower() == 'true':
+        time.sleep(int(TTL_SECONDS))
+        update_ip()
 

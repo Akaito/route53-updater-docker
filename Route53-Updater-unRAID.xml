@@ -44,8 +44,9 @@
           <Value>300</Value>
       </Variable>
       <Variable>
-          <Name>VERSION</Name>
-          <Value>latest</Value>
+          <Name>KEEP_CONTAINER_ALIVE</Name>
+          <Value>true</Value>
+          <Description>If 'true', sleep in Python and update occasionally.  Otherwise update and quit, and it's up to you to schedule runs of the container.</Description>
       </Variable>
   </Environment>
   <Networking>
