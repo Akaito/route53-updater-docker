@@ -10,14 +10,20 @@ create:
 		codesaru/route53-updater
 
 run:
-	@# -p format: host:container
-	sudo docker run -d \
+	sudo docker run -d --rm \
+		--env R53_HOSTED_ZONE_ID=A01BCD2EF3GHIJ \
+		--env DNS_NAME=your.domain.com \
+		--env AWS_SHARED_CREDENTIALS_FILE=/credentials \
+		--mount type=bind,source=$(PWD)/credentials,destination=/credentials,readonly=true \
 		--name route53-updater \
 		codesaru/route53-updater
 
 run-interactive:
-	@# -p format: host:container
-	sudo docker run -ti \
+	sudo docker run -ti --rm \
+		--env R53_HOSTED_ZONE_ID=A01BCD2EF3GHIJ \
+		--env DNS_NAME=your.domain.com \
+		--env AWS_SHARED_CREDENTIALS_FILE=/credentials \
+		--mount type=bind,source=$(PWD)/credentials,destination=/credentials,readonly=true \
 		--name route53-updater \
 		codesaru/route53-updater
 
