@@ -42,24 +42,27 @@
   <Config
     Name="Hosted Zone ID"
     Type="Variable"
+    Default="hosted-zone-id"
     Target="R53_HOSTED_ZONE_ID"
     Description="Route53's Hosted Zone ID to match the domain you're updating.  Will look something like 'A01BCD2EF3GHIJ'"
-    Required="true"></Config>
+    Required="true">hosted-zone-id</Config>
 
   <Config
     Name="AWS Access Key ID"
     Type="Variable"
+    Default="key-id"
     Target="AWS_ACCESS_KEY_ID"
     Description="AWS IAM user's access key ID.  Ideally a user which only has permission to do the desired Route53 update."
-    Required="true"></Config>
+    Required="true">key-id</Config>
 
   <Config
     Name="AWS Secret Access Key"
     Type="Variable"
+    Default="secret"
     Target="AWS_SECRET_ACCESS_KEY"
     Description="AWS IAM user's secret access key.  Ideally a user which only has permission to do the desired Route53 update."
     Required="true"
-    Mask="true"></Config>
+    Mask="true">secret</Config>
 
   <Config
     Name="AWS Secret Access Key"
