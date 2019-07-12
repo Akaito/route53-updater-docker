@@ -14,6 +14,7 @@ DNS_NAME       = os.getenv('DNS_NAME', None)  # TODO get from config (such as 'h
 # optional env vars
 PUBLIC_IP_URL = os.getenv('PUBLIC_IP_URL', 'http://checkip.amazonaws.com')
 TTL_SECONDS   = int(os.getenv('TTL_SECONDS', '300'))
+RETRY_SECONDS = TTL_SECONDS // 2
 
 
 assert HOSTED_ZONE_ID, "Route53's Hosted Zone ID should be set to env var HOSTED_ZONE_ID."
@@ -27,7 +28,16 @@ route53_client = session.create_client('route53')
 
 def update_ip():
     # get WAN IP
-    f = urllib.urlopen(PUBLIC_IP_URL)
+    while True:
+        try:
+            f = urllib.urlopen(PUBLIC_IP_URL)
+            break
+        except IOError as e:
+            if e.errno == -3:  # "Try again"
+                print('Got IOError -3: "Try again".  Retrying after a sleep...')
+                time.sleep(RETRY_SECONDS)
+            else:
+                raise
     assert f.getcode() == 200, 'Failed to get public IP'
     public_ip = f.read().strip()
     #print 'Discovered public IP: ' + public_ip
