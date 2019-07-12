@@ -5,6 +5,8 @@ Run this container to update a Route53 entry with your public IP address.  Think
 - If using locally, pay attention to the "credentials" and "Makefile" files.
 - If using in unRaid, ignore those files.  The template will take everything in its variables.
 
+Docker Hub: https://hub.docker.com/r/codesaru/route53-updater
+
 
 ## How to use
 
