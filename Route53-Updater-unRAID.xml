@@ -6,6 +6,8 @@
   <Changes>
 [font size=3]2019.03.09[/font]
 - Initial version.
+[font size=3]2019.07.12[/font]
+- Try to catch IOError -3 ("Try again") by sleeping and trying again later.
   </Changes>
 
 
