@@ -60,6 +60,7 @@ def is_valid_ipv4_address(address):
 
 
 def update_ip():
+    logit("INFO", "IP Update Check Started")
     # Get current DNS IP
     ip = iplookup.iplookup
     current_ip = ip(DNS_NAME)[0]
@@ -77,9 +78,9 @@ def update_ip():
     logit("INFO", f'Current Public IP:\t{public_ip}')
     # See if they're different
     if public_ip == current_ip:
-        logit("INFO", f'No IP Change, skipping...')
+        logit("INFO", 'No IP Change Required')
         return
-    logit("INFO", "Updating DNS...")
+    logit("WARN", "Updating DNS...")
 
     # update Route 53
     response = route53_client.change_resource_record_sets(
@@ -108,6 +109,7 @@ def update_ip():
 if __name__ == '__main__':
     update_ip()
 
-    while getenv('KEEP_CONTAINER_ALIVE', 'False').lower() == 'true':
+    while getenv('KEEP_CONTAINER_ALIVE', 'True').lower() == 'true':
+        logit("INFO", f'Sleeping for {TTL_SECONDS} seconds')
         time.sleep(int(TTL_SECONDS))
         update_ip()
