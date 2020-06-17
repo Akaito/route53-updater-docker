@@ -14,4 +14,4 @@ USER route53:route53
 
 COPY main.py /
 
-CMD [ "python3", "./main.py" ]
+ENTRYPOINT [ "/main.py" ]
