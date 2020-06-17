@@ -1,6 +1,7 @@
 #!/bin/env python3
 
-import os
+from os import getenv
+from sys import exit
 import time
 import requests
 import socket
@@ -11,33 +12,36 @@ import botocore.session
 
 from iplookup import iplookup
 
-# required env vars
-R53_HOSTED_ZONE_ID = os.getenv('R53_HOSTED_ZONE_ID', None)
-DNS_NAME = os.getenv('DNS_NAME', None)
 
-# optional env vars
-PUBLIC_IP_URL = os.getenv('PUBLIC_IP_URL', 'http://checkip.amazonaws.com')
-TTL_SECONDS = int(os.getenv('TTL_SECONDS', '300'))
-RETRY_SECONDS = TTL_SECONDS // 2
-
-
-if not R53_HOSTED_ZONE_ID:
-    logit("ERROR", "Route53's Hosted Zone ID should be set to env var R53_HOSTED_ZONE_ID.")
-if not DNS_NAME:
-    logit("ERROR", "The DNS name to update A records for should be set to env var DNS_NAME.")
-
-
-# it's expected that you've volume-mounted a file with only the creds this container should use
-session = botocore.session.get_session()
-route53_client = session.create_client('route53')
+def logit(level, message):
+    print(f'[{level.upper()}] {getdate()}: {message}')
 
 
 def getdate():
     return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
 
-def logit(level, message):
-    print(f'[{level.upper()}] {getdate()}: {message}')
+# required env vars
+R53_HOSTED_ZONE_ID = getenv('R53_HOSTED_ZONE_ID', None)
+DNS_NAME = getenv('DNS_NAME', None)
+
+# optional env vars
+PUBLIC_IP_URL = getenv('PUBLIC_IP_URL', 'http://checkip.amazonaws.com')
+TTL_SECONDS = int(getenv('TTL_SECONDS', '300'))
+RETRY_SECONDS = TTL_SECONDS // 2
+
+
+if not R53_HOSTED_ZONE_ID:
+    logit("ERROR", "Route53's Hosted Zone ID should be set to env var R53_HOSTED_ZONE_ID.")
+    exit(1)
+if not DNS_NAME:
+    logit("ERROR", "The DNS name to update A records for should be set to env var DNS_NAME.")
+    exit(1)
+
+
+# it's expected that you've volume-mounted a file with only the creds this container should use
+session = botocore.session.get_session()
+route53_client = session.create_client('route53')
 
 
 def is_valid_ipv4_address(address):
@@ -64,8 +68,10 @@ def update_ip():
     public_ip = r.text.strip()
     if not r.status_code == 200:
         logit("WARN", f'Request to {PUBLIC_IP_URL} failed')
+        return
     if not is_valid_ipv4_address(public_ip):
         logit("WARN", f'Failed to receive valid IP: {public_ip}')
+        return
 
     logit("INFO", f'Current DNS IP:\t{current_ip}')
     logit("INFO", f'Current Public IP:\t{public_ip}')
@@ -102,6 +108,6 @@ def update_ip():
 if __name__ == '__main__':
     update_ip()
 
-    while os.getenv('KEEP_CONTAINER_ALIVE', 'False').lower() == 'true':
+    while getenv('KEEP_CONTAINER_ALIVE', 'False').lower() == 'true':
         time.sleep(int(TTL_SECONDS))
         update_ip()
