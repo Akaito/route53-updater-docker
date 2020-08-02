@@ -60,50 +60,52 @@ def is_valid_ipv4_address(address):
 
 
 def update_ip():
-    logit("INFO", "IP Update Check Started")
-    # Get current DNS IP
-    ip = iplookup.iplookup
-    current_ip = ip(DNS_NAME)[0]
-    # get WAN IP
-    r = requests.get(PUBLIC_IP_URL)
-    public_ip = r.text.strip()
-    if not r.status_code == 200:
-        logit("WARN", f'Request to {PUBLIC_IP_URL} failed')
-        return
-    if not is_valid_ipv4_address(public_ip):
-        logit("WARN", f'Failed to receive valid IP: {public_ip}')
-        return
+    try:
+        logit("INFO", "IP Update Check Started")
+        # Get current DNS IP
+        ip = iplookup.iplookup
+        current_ip = ip(DNS_NAME)[0]
+        # get WAN IP
+        r = requests.get(PUBLIC_IP_URL)
+        public_ip = r.text.strip()
+        if not r.status_code == 200:
+            logit("WARN", f'Request to {PUBLIC_IP_URL} failed')
+            return
+        if not is_valid_ipv4_address(public_ip):
+            logit("WARN", f'Failed to receive valid IP: {public_ip}')
+            return
 
-    logit("INFO", f'Current DNS IP:\t{current_ip}')
-    logit("INFO", f'Current Public IP:\t{public_ip}')
-    # See if they're different
-    if public_ip == current_ip:
-        logit("INFO", 'No IP Change Required')
-        return
-    logit("WARN", "Updating DNS...")
+        logit("INFO", f'Current DNS IP:\t{current_ip}')
+        logit("INFO", f'Current Public IP:\t{public_ip}')
+        # See if they're different
+        if public_ip == current_ip:
+            logit("INFO", 'No IP Change Required')
+            return
+        logit("WARN", "Updating DNS...")
 
-    # update Route 53
-    response = route53_client.change_resource_record_sets(
-        HostedZoneId=R53_HOSTED_ZONE_ID,
-        ChangeBatch={
-            'Comment': 'Update public IP address from Docker container.',
-            'Changes': [
-                {
-                    'Action': 'UPSERT',
-                    'ResourceRecordSet': {
-                        'Name': str(DNS_NAME),
-                        'Type': 'A',
-                        'TTL': int(TTL_SECONDS),
-                        'ResourceRecords': [
-                            {'Value': public_ip}
-                        ]
+        # update Route 53
+        response = route53_client.change_resource_record_sets(
+            HostedZoneId=R53_HOSTED_ZONE_ID,
+            ChangeBatch={
+                'Comment': 'Update public IP address from Docker container.',
+                'Changes': [
+                    {
+                        'Action': 'UPSERT',
+                        'ResourceRecordSet': {
+                            'Name': str(DNS_NAME),
+                            'Type': 'A',
+                            'TTL': int(TTL_SECONDS),
+                            'ResourceRecords': [
+                                {'Value': public_ip}
+                            ]
+                        }
                     }
-                }
-            ]
-        }
-    )
-
-    print(response['ChangeInfo']['Status'])
+                ]
+            }
+        )
+        print(response['ChangeInfo']['Status'])
+    except Exception as err:
+        logit("ERROR", f'An error occured whilst running the UpdateIP method:\n{err}')
 
 
 if __name__ == '__main__':
