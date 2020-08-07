@@ -1,13 +1,12 @@
 # Route 53 updater for DDNS-like home network access.
-#
-FROM alpine:latest
-LABEL maintainer="Chris Barrett <chris@codesaru.com>"
+# This image is for 64bit ARMv8 systems
+FROM arm64v8/python:3.8-alpine
 
 COPY requirements.txt /
 RUN apk --update add py3-pip \
-	&& pip install --no-cache-dir -r requirements.txt \
+	&& python3 -m pip install -r requirements.txt \
 	&& rm -rf /var/cache/apk/* \
-    && rm -f /requirements.txt
+        && rm -f /requirements.txt
 
 RUN addgroup -S route53 \
     && adduser -G route53 -S -D route53
@@ -15,4 +14,4 @@ USER route53:route53
 
 COPY main.py /
 
-CMD [ "/usr/bin/python3", "-u", "/main.py" ]
+CMD [ "/usr/local/bin/python3", "-u", "/main.py" ]
