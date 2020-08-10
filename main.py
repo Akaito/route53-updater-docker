@@ -59,20 +59,20 @@ class Route53updater():
             try:
                 current_ip = get_ipv4(self.dnsName)
             except:
-                logging.warning(f"Failed to lookup {self.dnsName} - assuming it doesn't exist yet, and continuing!")
+                logging.warning("Failed to lookup {} - assuming it doesn't exist yet, and continuing!".format(self.dnsName))
                 current_ip = 'UNKNOWN'
             # get WAN IP
             r = requests.get(self.publicIpUrl)
             public_ip = r.text.strip()
             if not r.status_code == 200:
-                logging.warning(f'Request to {self.publicIpUrl} failed')
+                logging.warning('Request to {} failed'.format(self.publicIpUrl))
                 return
             if not self.is_valid_ipv4_address(public_ip):
-                logging.warning(f'Failed to receive valid IP: {public_ip}')
+                logging.warning('Failed to receive valid IP: {}'.format(public_ip))
                 return
 
-            logging.info(f'Current DNS IP:\t{current_ip}')
-            logging.info(f'Current Public IP:\t{public_ip}')
+            logging.info('Current DNS IP:\t{}'.format(current_ip))
+            logging.info('Current Public IP:\t{}'.format(public_ip))
             # See if they're different
             if public_ip == current_ip:
                 logging.info('No IP Change Required')
@@ -101,7 +101,7 @@ class Route53updater():
             )
         except Exception as err:
             # Catch all, so the container continues running/retrying if a failure occurs
-            logging.error(f'An error occured whilst running the UpdateIP method:\n{err}')
+            logging.error('An error occured whilst running the UpdateIP method:\n{}'.format(err))
 
 
 if __name__ == '__main__':
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         R53_HOSTED_ZONE_ID = os.environ['R53_HOSTED_ZONE_ID']
         DNS_NAME = os.environ['DNS_NAME']
     except KeyError as err:
-        logging.error(f'Missing required variable: {err.args[0]}')
+        logging.error('Missing required variable: {}'.format(err.args[0]))
         exit(1)
 
     # optional env vars
@@ -138,17 +138,17 @@ if __name__ == '__main__':
 
         # If KEEP_CONTAINER_ALIVE, run periodically every TTL_SECONDS
         while os.getenv('KEEP_CONTAINER_ALIVE', 'True').lower() == 'true':
-            logging.info(f'Sleeping for {TTL_SECONDS} seconds')
+            logging.info('Sleeping for {} seconds'.format(TTL_SECONDS))
             time.sleep(TTL_SECONDS)
             r53_updater.update_ip()
 
     threads = [threading.Thread(target=updater_thread_func, args=(r53,)) for r53 in r53_updaters]
     # start running the updates
-    logging.info(f'Starting {len(threads)} updater threads.')
+    logging.info('Starting {} updater threads.'.format(len(threads)))
     for thread in threads:
         thread.start()
     # quit once they're all done
-    logging.info(f'Waiting for updater threads to complete.')
+    logging.info('Waiting for updater threads to complete.')
     for thread in threads:
         thread.join()
 
