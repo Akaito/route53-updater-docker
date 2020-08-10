@@ -54,7 +54,7 @@ class Route53updater():
 
     def update_ip(self):
         try:
-            logging.info('IP Update Check Started')
+            logging.info('IP Update Check Started for {}'.format(self.dnsName))
             # Get current DNS A record (IP)
             try:
                 current_ip = get_ipv4(self.dnsName)
