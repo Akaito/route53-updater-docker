@@ -1,85 +1,132 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
+import logging
 import os
+import socket
 import time
-import urllib
+from datetime import datetime
+from sys import exit
 
-import botocore
-import botocore.session
-
-# required env vars
-HOSTED_ZONE_ID = os.getenv('R53_HOSTED_ZONE_ID', None)  # TODO get config'd zone ID string (such as for codesaru.com)
-DNS_NAME       = os.getenv('DNS_NAME', None)  # TODO get from config (such as 'home.codesaru.com')
-
-# optional env vars
-PUBLIC_IP_URL = os.getenv('PUBLIC_IP_URL', 'http://checkip.amazonaws.com')
-TTL_SECONDS   = int(os.getenv('TTL_SECONDS', '300'))
-RETRY_SECONDS = TTL_SECONDS // 2
+import boto3
+import requests
+from iplookup import iplookup
 
 
-assert HOSTED_ZONE_ID, "Route53's Hosted Zone ID should be set to env var HOSTED_ZONE_ID."
-assert DNS_NAME, "The DNS name to update A records for should be set to env var DNS_NAME."
+class Route53updater():
+    def __init__(self, hostedZoneId, dnsName, publicIpUrl, ttl=30):
+        """Class to check/update a Route53 A Record, based on an external IP lookup (eg. for Dynamic IPs on a home network)
 
+        Args:
+            hostedZoneId (string): AWS Route53 Hosted Zone ID
+            dnsName (string): Domain (FQDN) to maintain in Route53
+            publicIpUrl (string): Domain to use to check our current external IP
+            ttl (int): TTL value to apply to the DNS record.
+        """
+        # it's expected that you've volume-mounted a file with only the creds this container should use
+        self.route53_client = boto3.client('route53')
+        self.hostedZoneId = hostedZoneId
+        self.dnsName = dnsName
+        self.publicIpUrl = publicIpUrl
+        self.ttl = ttl
 
-# it's expected that you've volume-mounted a file with only the creds this container should use
-session = botocore.session.get_session()
-route53_client = session.create_client('route53')
-
-
-def update_ip():
-    # get WAN IP
-    while True:
+    def is_valid_ipv4_address(self, address):
         try:
-            f = urllib.urlopen(PUBLIC_IP_URL)
-            break
-        except IOError as e:
-            if e.errno == -3:  # "Try again"
-                print('Got IOError -3: "Try again".  Retrying after a sleep...')
-                time.sleep(RETRY_SECONDS)
-            else:
-                raise
-    assert f.getcode() == 200, 'Failed to get public IP'
-    public_ip = f.read().strip()
-    #print 'Discovered public IP: ' + public_ip
+            socket.inet_pton(socket.AF_INET, address)
+        except AttributeError:  # no inet_pton here, sorry
+            try:
+                socket.inet_aton(address)
+            except socket.error:
+                return False
+            return address.count('.') == 3
+        except socket.error:  # not a valid address
+            return False
 
+        return True
 
-    # update Route 53
-    response = route53_client.change_resource_record_sets(
-            HostedZoneId=HOSTED_ZONE_ID,
-            ChangeBatch={
-                'Comment': 'Update public IP address from Docker container.',
-                'Changes': [
-                    {
-                        'Action': 'UPSERT',
-                        'ResourceRecordSet': {
-                            'Name': str(DNS_NAME),
-                            'Type': 'A',
-                            'TTL': int(TTL_SECONDS),
-                            'ResourceRecords': [
-                                { 'Value': public_ip }
-                            ]
+    def update_ip(self):
+        try:
+            logging.info("IP Update Check Started")
+            # Get current DNS A record (IP)
+            ip = iplookup.iplookup
+            try:
+                current_ip = ip(self.dnsName)[0]
+            except IndexError as err:
+                logging.warning(f'Failed to lookup {self.dnsName} - assuming it doesn\'t exist yet, and continuing!')
+                current_ip = "1.2.3.4"
+            # get WAN IP
+            r = requests.get(self.publicIpUrl)
+            public_ip = r.text.strip()
+            if not r.status_code == 200:
+                logging.warning(f'Request to {self.publicIpUrl} failed')
+                return
+            if not self.is_valid_ipv4_address(public_ip):
+                logging.warning(f'Failed to receive valid IP: {public_ip}')
+                return
+
+            logging.info(f'Current DNS IP:\t{current_ip}')
+            logging.info(f'Current Public IP:\t{public_ip}')
+            # See if they're different
+            if public_ip == current_ip:
+                logging.info('No IP Change Required')
+                return
+            logging.warning("Updating DNS...")
+
+            # update Route 53
+            response = self.route53_client.change_resource_record_sets(
+                HostedZoneId=self.hostedZoneId,
+                ChangeBatch={
+                    'Comment': 'Update public IP address from Docker container.',
+                    'Changes': [
+                        {
+                            'Action': 'UPSERT',
+                            'ResourceRecordSet': {
+                                'Name': str(self.dnsName),
+                                'Type': 'A',
+                                'TTL': int(self.ttl),
+                                'ResourceRecords': [
+                                    {'Value': public_ip}
+                                ]
+                            }
                         }
-                    },
-                    {
-                        'Action': 'UPSERT',
-                        'ResourceRecordSet': {
-                            'Name': '*.' + str(DNS_NAME),
-                            'Type': 'A',
-                            'TTL': int(TTL_SECONDS),
-                            'ResourceRecords': [
-                                { 'Value': public_ip }
-                            ]
-                        }
-                    }
-                ]})
-
-    print(response['ChangeInfo']['Status'])
+                    ]
+                }
+            )
+        except Exception as err:
+            # Catch all, so the container continues running/retrying if a failure occurs
+            logging.error(f'An error occured whilst running the UpdateIP method:\n{err}')
 
 
 if __name__ == '__main__':
-    update_ip()
+    # Setup logging how we want it
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        level=logging.INFO,
+        datefmt='%Y-%m-%d %H:%M:%S')
 
-    while os.getenv('KEEP_CONTAINER_ALIVE', 'False').lower() == 'true':
-        time.sleep(int(TTL_SECONDS))
-        update_ip()
+    # required env vars
+    try:
+        R53_HOSTED_ZONE_ID = os.environ['R53_HOSTED_ZONE_ID']
+        DNS_NAME = os.environ['DNS_NAME']
+    except KeyError as err:
+        logging.error(f"Missing required variable: {err.args[0]}")
+        exit(1)
 
+    # optional env vars
+    PUBLIC_IP_URL = os.getenv('PUBLIC_IP_URL', 'http://checkip.amazonaws.com')
+    TTL_SECONDS = int(os.getenv('TTL_SECONDS', '300'))
+
+    # Instantiate the class
+    r53 = Route53updater(
+        hostedZoneId=R53_HOSTED_ZONE_ID,
+        dnsName=DNS_NAME,
+        publicIpUrl=PUBLIC_IP_URL
+    )
+
+    # Run the updater (once)
+    r53.update_ip()
+
+    # If KEEP_CONTAINER_ALIVE, run periodically every TTL_SECONDS
+    while os.getenv('KEEP_CONTAINER_ALIVE', 'True').lower() == 'true':
+        logging.info(f'Sleeping for {TTL_SECONDS} seconds')
+        time.sleep(TTL_SECONDS)
+        r53.update_ip()
