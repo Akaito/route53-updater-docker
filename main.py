@@ -6,10 +6,19 @@ import socket
 import time
 from datetime import datetime
 from sys import exit
+import threading
 
 import boto3
 import requests
-from iplookup import iplookup
+
+
+def get_ipv4(hostname):
+    if hostname.startswith('*.'):
+        # We want to be able to update a wildcard DNS record like
+        # '*.example.com', but we can't lookup that record by hostname.  So
+        # just do this as an easy 'good-enough' solution.
+        hostname = hostname.replace('*', 'wildcard')
+    return socket.gethostbyname(hostname)
 
 
 class Route53updater():
@@ -45,14 +54,13 @@ class Route53updater():
 
     def update_ip(self):
         try:
-            logging.info("IP Update Check Started")
+            logging.info('IP Update Check Started')
             # Get current DNS A record (IP)
-            ip = iplookup.iplookup
             try:
-                current_ip = ip(self.dnsName)[0]
-            except IndexError as err:
-                logging.warning(f'Failed to lookup {self.dnsName} - assuming it doesn\'t exist yet, and continuing!')
-                current_ip = "1.2.3.4"
+                current_ip = get_ipv4(self.dnsName)
+            except:
+                logging.warning(f"Failed to lookup {self.dnsName} - assuming it doesn't exist yet, and continuing!")
+                current_ip = 'UNKNOWN'
             # get WAN IP
             r = requests.get(self.publicIpUrl)
             public_ip = r.text.strip()
@@ -69,7 +77,7 @@ class Route53updater():
             if public_ip == current_ip:
                 logging.info('No IP Change Required')
                 return
-            logging.warning("Updating DNS...")
+            logging.warning('Updating DNS...')
 
             # update Route 53
             response = self.route53_client.change_resource_record_sets(
@@ -108,7 +116,7 @@ if __name__ == '__main__':
         R53_HOSTED_ZONE_ID = os.environ['R53_HOSTED_ZONE_ID']
         DNS_NAME = os.environ['DNS_NAME']
     except KeyError as err:
-        logging.error(f"Missing required variable: {err.args[0]}")
+        logging.error(f'Missing required variable: {err.args[0]}')
         exit(1)
 
     # optional env vars
@@ -116,17 +124,31 @@ if __name__ == '__main__':
     TTL_SECONDS = int(os.getenv('TTL_SECONDS', '300'))
 
     # Instantiate the class
-    r53 = Route53updater(
-        hostedZoneId=R53_HOSTED_ZONE_ID,
-        dnsName=DNS_NAME,
-        publicIpUrl=PUBLIC_IP_URL
-    )
+    r53_updaters = []
+    for dns_name in DNS_NAME.split(';'):
+        r53_updaters.append(Route53updater(
+            hostedZoneId=R53_HOSTED_ZONE_ID,
+            dnsName=dns_name,
+            publicIpUrl=PUBLIC_IP_URL
+        ))
 
-    # Run the updater (once)
-    r53.update_ip()
+    def updater_thread_func (r53_updater):
+        # Run the updater (once)
+        r53_updater.update_ip()
 
-    # If KEEP_CONTAINER_ALIVE, run periodically every TTL_SECONDS
-    while os.getenv('KEEP_CONTAINER_ALIVE', 'True').lower() == 'true':
-        logging.info(f'Sleeping for {TTL_SECONDS} seconds')
-        time.sleep(TTL_SECONDS)
-        r53.update_ip()
+        # If KEEP_CONTAINER_ALIVE, run periodically every TTL_SECONDS
+        while os.getenv('KEEP_CONTAINER_ALIVE', 'True').lower() == 'true':
+            logging.info(f'Sleeping for {TTL_SECONDS} seconds')
+            time.sleep(TTL_SECONDS)
+            r53_updater.update_ip()
+
+    threads = [threading.Thread(target=updater_thread_func, args=(r53,)) for r53 in r53_updaters]
+    # start running the updates
+    logging.info(f'Starting {len(threads)} updater threads.')
+    for thread in threads:
+        thread.start()
+    # quit once they're all done
+    logging.info(f'Waiting for updater threads to complete.')
+    for thread in threads:
+        thread.join()
+
