@@ -12,7 +12,7 @@ create:
 run:
 	sudo docker run -d --rm \
 		--env R53_HOSTED_ZONE_ID=A01BCD2EF3GHIJ \
-		--env DNS_NAME=your.domain.com \
+		--env='DNS_NAME=your.domain.com;*.your.domain.com' \
 		--env AWS_SHARED_CREDENTIALS_FILE=/credentials \
 		--mount type=bind,source=$(PWD)/credentials,destination=/credentials,readonly=true \
 		--name route53-updater \
@@ -21,7 +21,7 @@ run:
 run-interactive:
 	sudo docker run -ti --rm \
 		--env R53_HOSTED_ZONE_ID=A01BCD2EF3GHIJ \
-		--env DNS_NAME=your.domain.com \
+		--env='DNS_NAME=your.domain.com;*.your.domain.com' \
 		--env AWS_SHARED_CREDENTIALS_FILE=/credentials \
 		--mount type=bind,source=$(PWD)/credentials,destination=/credentials,readonly=true \
 		--name route53-updater \
